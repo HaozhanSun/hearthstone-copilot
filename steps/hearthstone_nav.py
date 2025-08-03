@@ -30,12 +30,11 @@ class HearthstoneNavigationStep(BaseStep):
     def execute(self, context: BotContext) -> BotContext:
         """Navigate Hearthstone to home screen"""
         try:
-            window_service = self.services.get('window')
-            screenshot_service = self.services.get('screenshot')
-            ocr_service = self.services.get('ocr')
-            
-            if not all([window_service, screenshot_service, ocr_service]):
-                raise StepException(self.get_step_name(), "Required services not available")
+            # Validate services
+            self.validate_services(['window', 'screenshot', 'ocr'])
+            window_service = self.get_service('window')
+            screenshot_service = self.get_service('screenshot')
+            ocr_service = self.get_service('ocr')
             
             # Wait for Hearthstone to launch
             self.logger.info("Waiting for Hearthstone to launch...")
@@ -49,8 +48,8 @@ class HearthstoneNavigationStep(BaseStep):
             if not hearthstone_window:
                 raise StepException(self.get_step_name(), "Hearthstone window not found")
             
-            # Focus the window
-            if not window_service.focus_window(hearthstone_window):
+            # Focus the window with retry logic
+            if not self.focus_window_with_retry(hearthstone_window, window_service):
                 raise StepException(self.get_step_name(), "Failed to focus Hearthstone window")
             
             # Get window region
@@ -78,13 +77,13 @@ class HearthstoneNavigationStep(BaseStep):
     
     def _check_home_screen(self, window) -> bool:
         """Check if we're already at the home screen"""
-        screenshot_service = self.services.get('screenshot')
-        ocr_service = self.services.get('ocr')
+        screenshot_service = self.get_service('screenshot')
+        ocr_service = self.get_service('ocr')
         
         if not all([screenshot_service, ocr_service]):
             return False
         
-        screenshot = screenshot_service.capture_window_object(window)
+        screenshot = self.capture_window_screenshot_safe(screenshot_service, window)
         if screenshot is None:
             return False
         
@@ -104,8 +103,8 @@ class HearthstoneNavigationStep(BaseStep):
         try:
             x, y, width, height = window_service.get_window_region(window)
             
-            # Take screenshot
-            screenshot = screenshot_service.capture_window(x, y, width, height)
+            # Take screenshot safely
+            screenshot = self.capture_screenshot_safe(screenshot_service, x, y, width, height)
             if screenshot is None:
                 return False
             

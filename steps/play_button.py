@@ -31,12 +31,11 @@ class PlayButtonStep(BaseStep):
     def execute(self, context: BotContext) -> BotContext:
         """Find and click the PLAY button"""
         try:
-            window_service = self.services.get('window')
-            screenshot_service = self.services.get('screenshot')
-            ocr_service = self.services.get('ocr')
-            
-            if not all([window_service, screenshot_service, ocr_service]):
-                raise StepException(self.get_step_name(), "Required services not available")
+            # Validate services
+            self.validate_services(['window', 'screenshot', 'ocr'])
+            window_service = self.get_service('window')
+            screenshot_service = self.get_service('screenshot')
+            ocr_service = self.get_service('ocr')
             
             # Get Battle.net window
             battlenet_window = context.step_data.get('battlenet_window')
@@ -46,17 +45,9 @@ class PlayButtonStep(BaseStep):
                     raise StepException(self.get_step_name(), "Battle.net window not found")
                 context.step_data['battlenet_window'] = battlenet_window
             
-            # Focus the window
-            if not window_service.focus_window(battlenet_window):
-                # Try to refresh the window handle
-                self.logger.warning("Failed to focus window, trying to refresh window handle...")
-                battlenet_window = window_service.find_battlenet_window()
-                if not battlenet_window:
-                    raise StepException(self.get_step_name(), "Battle.net window not found after refresh")
-                context.step_data['battlenet_window'] = battlenet_window
-                
-                if not window_service.focus_window(battlenet_window):
-                    raise StepException(self.get_step_name(), "Failed to focus Battle.net window after refresh")
+            # Focus the window with retry logic
+            if not self.focus_window_with_retry(battlenet_window, window_service, max_retries=1):
+                raise StepException(self.get_step_name(), "Failed to focus Battle.net window")
             
             # Get window region
             x, y, width, height = window_service.get_window_region(battlenet_window)
@@ -68,19 +59,14 @@ class PlayButtonStep(BaseStep):
                 if not self._check_bot_running(context):
                     return context
                 
-                # Take screenshot
-                screenshot = screenshot_service.capture_window(x, y, width, height)
+                # Take screenshot safely
+                screenshot = self.capture_screenshot_safe(screenshot_service, x, y, width, height)
                 if screenshot is None:
                     time.sleep(3)
                     continue
                 
                 # Save debug screenshot
-                logger = self.services.get('logger')
-                if logger:
-                    logger.save_debug_screenshot(
-                        screenshot, "battlenet_window", False, 
-                        f"Window size: {width}x{height}", "play_button"
-                    )
+                self.save_debug_screenshot(screenshot, "battlenet_window", False, f"Window size: {width}x{height}")
                 
                 # Check if already playing
                 if self._check_playing_status_from_screenshot(screenshot, ocr_service):
@@ -119,13 +105,13 @@ class PlayButtonStep(BaseStep):
     
     def _check_playing_status(self, window) -> bool:
         """Check if Hearthstone is already playing"""
-        screenshot_service = self.services.get('screenshot')
-        ocr_service = self.services.get('ocr')
+        screenshot_service = self.get_service('screenshot')
+        ocr_service = self.get_service('ocr')
         
         if not all([screenshot_service, ocr_service]):
             return False
         
-        screenshot = screenshot_service.capture_window_object(window)
+        screenshot = self.capture_window_screenshot_safe(screenshot_service, window)
         if screenshot is None:
             return False
         
@@ -205,6 +191,4 @@ class PlayButtonStep(BaseStep):
     
     def _check_bot_running(self, context: BotContext) -> bool:
         """Check if bot should continue running"""
-        # This would be implemented based on the bot's running state
-        # For now, return True
-        return True 
+        return self.check_bot_running(context) 

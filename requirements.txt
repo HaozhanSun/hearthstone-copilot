@@ -7,6 +7,7 @@ pygetwindow>=0.0.9
 pywin32>=300
 Pillow>=8.3.0
 keyboard>=0.13.5
+pynput>=1.7.0
 
 # Optional Dependencies (Recommended for better performance)
 opencv-contrib-python>=4.5.0

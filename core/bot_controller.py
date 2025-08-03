@@ -45,6 +45,11 @@ class BotController:
             self.logger.warning("Bot is already running")
             return
         
+        # Additional check to prevent race conditions
+        if hasattr(self, 'execution_thread') and self.execution_thread and self.execution_thread.is_alive():
+            self.logger.warning("Bot execution thread is already alive")
+            return
+        
         self.running = True
         self.stop_event.clear()
         self.context = BotContext(state=BotState.STARTING)

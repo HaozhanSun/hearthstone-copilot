@@ -60,8 +60,10 @@ def main():
             if bot_controller.is_running():
                 if messagebox.askokcancel("Quit", "Bot is still running. Do you want to stop it and quit?"):
                     bot_controller.stop()
+                    app.cleanup()
                     root.destroy()
             else:
+                app.cleanup()
                 root.destroy()
         
         root.protocol("WM_DELETE_WINDOW", on_closing)

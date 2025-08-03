@@ -7,6 +7,7 @@ from tkinter import ttk, scrolledtext, messagebox
 import threading
 import queue
 import time
+from pynput import keyboard
 from datetime import datetime
 from typing import Dict, Any
 
@@ -26,6 +27,9 @@ class MainWindow:
         self.setup_window()
         self.setup_gui()
         self.setup_logging()
+        
+        # Setup global hotkeys
+        self.setup_global_hotkeys()
         
         # Start log consumer
         self.consume_logs()
@@ -191,8 +195,10 @@ class MainWindow:
     def toggle_bot(self):
         """Toggle bot on/off"""
         if self.bot_controller.is_running():
+            self.logger.info("GUI: Stopping bot via button")
             self.bot_controller.stop()
         else:
+            self.logger.info("GUI: Starting bot via button")
             self.bot_controller.start()
     
     def check_status(self):
@@ -213,4 +219,54 @@ Error: {status.get('error_message', 'None')}
     
     def clear_logs(self):
         """Clear the log display"""
-        self.log_text.delete(1.0, tk.END) 
+        self.log_text.delete(1.0, tk.END)
+    
+    def setup_global_hotkeys(self):
+        """Setup global hotkeys for F10 (start) and F12 (stop)"""
+        try:
+            # Create keyboard listener
+            self.keyboard_listener = keyboard.GlobalHotKeys({
+                '<f10>': self.start_bot_hotkey,
+                '<f12>': self.stop_bot_hotkey
+            })
+            
+            # Start listening in a separate thread
+            self.keyboard_thread = threading.Thread(target=self.keyboard_listener.start, daemon=True)
+            self.keyboard_thread.start()
+            
+            self.logger.info("Global hotkeys enabled: F10 (Start), F12 (Stop)")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to setup global hotkeys: {e}")
+    
+    def start_bot_hotkey(self):
+        """Handle F10 hotkey to start bot"""
+        try:
+            if not self.bot_controller.is_running():
+                self.logger.info("F10 pressed - Starting bot")
+                # Use after() to ensure thread safety
+                self.root.after(0, self.bot_controller.start)
+            else:
+                self.logger.info("F10 pressed - Bot is already running")
+        except Exception as e:
+            self.logger.error(f"Error in start hotkey: {e}")
+    
+    def stop_bot_hotkey(self):
+        """Handle F12 hotkey to stop bot"""
+        try:
+            if self.bot_controller.is_running():
+                self.logger.info("F12 pressed - Stopping bot")
+                # Use after() to ensure thread safety
+                self.root.after(0, self.bot_controller.stop)
+            else:
+                self.logger.info("F12 pressed - Bot is already stopped")
+        except Exception as e:
+            self.logger.error(f"Error in stop hotkey: {e}")
+    
+    def cleanup(self):
+        """Cleanup resources when window is closed"""
+        try:
+            if hasattr(self, 'keyboard_listener'):
+                self.keyboard_listener.stop()
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}") 
