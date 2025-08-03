@@ -1,0 +1,92 @@
+{
+  "Fireball": {
+    "name": "Fireball",
+    "cost": 4,
+    "type": "spell",
+    "rarity": "common",
+    "class": "mage",
+    "description": "Deal 6 damage."
+  },
+  "Frostbolt": {
+    "name": "Frostbolt",
+    "cost": 2,
+    "type": "spell",
+    "rarity": "common",
+    "class": "mage",
+    "description": "Deal 3 damage to a character and Freeze it."
+  },
+  "Arcane Intellect": {
+    "name": "Arcane Intellect",
+    "cost": 3,
+    "type": "spell",
+    "rarity": "common",
+    "class": "mage",
+    "description": "Draw 2 cards."
+  },
+  "Water Elemental": {
+    "name": "Water Elemental",
+    "cost": 4,
+    "type": "minion",
+    "rarity": "common",
+    "class": "mage",
+    "attack": 3,
+    "health": 6,
+    "description": "Freeze any character damaged by this minion."
+  },
+  "Polymorph": {
+    "name": "Polymorph",
+    "cost": 4,
+    "type": "spell",
+    "rarity": "common",
+    "class": "mage",
+    "description": "Transform a minion into a 1/1 Sheep."
+  },
+  "Flamestrike": {
+    "name": "Flamestrike",
+    "cost": 7,
+    "type": "spell",
+    "rarity": "common",
+    "class": "mage",
+    "description": "Deal 4 damage to all enemy minions."
+  },
+  "Kobold Geomancer": {
+    "name": "Kobold Geomancer",
+    "cost": 2,
+    "type": "minion",
+    "rarity": "common",
+    "class": "neutral",
+    "attack": 2,
+    "health": 2,
+    "description": "Spell Damage +1"
+  },
+  "Chillwind Yeti": {
+    "name": "Chillwind Yeti",
+    "cost": 4,
+    "type": "minion",
+    "rarity": "common",
+    "class": "neutral",
+    "attack": 4,
+    "health": 5,
+    "description": ""
+  },
+  "Sen'jin Shieldmasta": {
+    "name": "Sen'jin Shieldmasta",
+    "cost": 4,
+    "type": "minion",
+    "rarity": "common",
+    "class": "neutral",
+    "attack": 3,
+    "health": 5,
+    "description": "Taunt"
+  },
+  "Boulderfist Ogre": {
+    "name": "Boulderfist Ogre",
+    "cost": 6,
+    "type": "minion",
+    "rarity": "common",
+    "class": "neutral",
+    "attack": 6,
+    "health": 7,
+    "description": ""
+  }
+}
