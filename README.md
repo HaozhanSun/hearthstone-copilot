@@ -1,293 +1,291 @@
-# Hearthstone Bot
+# Hearthstone Copilot Bot
 
-An automated script that recognizes cards and plays Hearthstone for you using computer vision and AI decision making.
+An automated Hearthstone bot with a refactored modular architecture that provides efficient game automation using computer vision and OCR technology.
 
 ## Features
 
-- **Game Launch**: Automatically launches Hearthstone from the configured path
-- **Window Detection**: Automatically finds and focuses the Hearthstone game window
-- **Card Recognition**: Uses OCR and computer vision to identify cards in hand and on board
-- **Game State Analysis**: Analyzes current mana, health, board state, and game phase
-- **AI Decision Making**: Makes strategic decisions about which cards to play
-- **Automation**: Safely controls mouse and keyboard to execute moves
-- **Multiple Modes**: Analysis mode (view only) and auto-play mode
-- **Path Configuration**: Easy configuration of Hearthstone installation path
-- **CLI Monitoring**: Parallel command-line logging for monitoring bot progress
+- **Modular Architecture**: Clean, maintainable codebase with separated concerns
+- **Game Launch**: Automatically launches Hearthstone from Battle.net
+- **Window Management**: Intelligent window detection and focus management
+- **OCR Integration**: Uses Umi-OCR for accurate text recognition
+- **State Machine**: Robust step-by-step execution with error handling
+- **GUI Interface**: Modern Tkinter-based user interface
+- **Comprehensive Logging**: Detailed logging with GUI integration
+- **Error Recovery**: Automatic retry mechanisms and graceful error handling
 
 ## Project Structure
 
 ```
 hearthstone_bot/
-├── venv/                    # Virtual environment (created by setup)
-├── automation/              # Mouse/keyboard automation
-│   ├── window_utils.py      # Window detection and screenshot capture
-│   └── input_controller.py  # Safe input automation
-├── card_recognition/        # Card detection and OCR
-│   ├── card_detector.py     # Computer vision for card detection
-│   ├── ocr_reader.py        # Text extraction from card images
-│   └── card_database.py     # Card information database
-├── game_state/             # Game state analysis
-│   └── game_analyzer.py     # Analyzes current game situation
-├── decision_engine/        # AI decision making
-│   └── ai_engine.py        # Strategic move selection
-├── main.py                 # Command-line bot controller
-├── ui.py                   # GUI interface
-├── launcher.py             # Interface chooser
-├── setup_venv.bat          # 🆕 Virtual environment setup
-├── activate_venv.bat       # 🆕 Activate virtual environment
-├── run_with_venv.bat       # 🆕 Run bot with venv
-├── run_cli_logger.bat      # 🆕 CLI monitoring tool
-├── cli_logger.py           # 🆕 CLI logger implementation
-├── check_dependencies.py   # Dependency checker
-├── requirements.txt        # Production dependencies
-├── requirements-dev.txt    # 🆕 Development dependencies
-├── .gitignore             # 🆕 Git ignore file
-├── README.md              # Main documentation
-└── README_VENV.md         # 🆕 Virtual environment guide
+├── core/                    # Core bot functionality
+│   ├── __init__.py         # Core module exports
+│   ├── bot_state.py        # State management (BotState, BotContext)
+│   ├── bot_controller.py   # Main bot orchestrator
+│   └── exceptions.py       # Custom exception classes
+├── services/               # Service layer
+│   ├── __init__.py         # Services module exports
+│   ├── window_service.py   # Window management and interaction
+│   ├── ocr_service.py      # OCR operations and text detection
+│   ├── screenshot_service.py # Screenshot capture and processing
+│   └── logging_service.py  # Centralized logging system
+├── steps/                  # Bot workflow steps
+│   ├── __init__.py         # Steps module exports
+│   ├── base_step.py        # Abstract base class for all steps
+│   ├── ocr_management.py   # OCR service management
+│   ├── battlenet_launch.py # Battle.net application launch
+│   ├── play_button.py      # PLAY button detection and clicking
+│   ├── hearthstone_nav.py  # Hearthstone navigation
+│   └── collection_access.py # Collection access
+├── ui/                     # User interface
+│   ├── __init__.py         # UI module exports
+│   ├── main_window.py      # Main GUI window
+│   ├── components/         # UI components
+│   └── dialogs/            # Dialog windows
+├── utils/                  # Utility functions
+│   ├── __init__.py         # Utils module exports
+│   ├── image_utils.py      # Image processing utilities
+│   ├── text_utils.py       # Text processing utilities
+│   └── config_utils.py     # Configuration utilities
+├── main.py                 # Main entry point
+├── launcher.py             # Application launcher
+├── requirements.txt        # Python dependencies
+├── .gitignore             # Git ignore rules
+└── README.md              # This documentation
 ```
+
+## Architecture Overview
+
+### Core Components
+
+- **BotState**: Enum defining bot states (IDLE, STARTING, RUNNING, etc.)
+- **BotContext**: Data class holding bot execution context and state
+- **BotController**: Main orchestrator that manages step execution
+- **Custom Exceptions**: Structured error handling hierarchy
+
+### Service Layer
+
+- **WindowService**: Manages application windows (Battle.net, Hearthstone)
+- **OCRService**: Handles text recognition using Umi-OCR
+- **ScreenshotService**: Captures and processes screenshots
+- **LoggingService**: Centralized logging with GUI integration
+
+### Step Classes
+
+Each step implements the `BaseStep` interface:
+- **OCRManagementStep**: Ensures OCR service is running
+- **BattleNetLaunchStep**: Launches Battle.net application
+- **PlayButtonStep**: Finds and clicks the PLAY button
+- **HearthstoneNavigationStep**: Navigates to Hearthstone home screen
+- **CollectionAccessStep**: Accesses the card collection
 
 ## Prerequisites
 
 ### System Requirements
 - Windows 10/11
 - Python 3.8 or higher
-- Hearthstone game installed and running
+- Battle.net and Hearthstone installed
 
 ### Required Software
 1. **Python**: Download from [python.org](https://python.org)
-2. **Tesseract OCR**: Download from [GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
-   - Install to default location (usually `C:\Program Files\Tesseract-OCR`)
-   - Add to PATH environment variable
-3. **Hearthstone**: Install and run the game
+2. **Umi-OCR**: Included in the project (Umi-OCR_Rapid_v2.1.5)
+3. **Battle.net**: Install from [battle.net](https://battle.net)
+4. **Hearthstone**: Install via Battle.net
 
 ## Installation
 
-### Option 1: Virtual Environment (Recommended)
+### Quick Setup
 
-1. **Clone or download this repository**
+1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd hearthstone_bot
+   git clone https://github.com/HaozhanSun/hearthstone-copilot.git
+   cd hearthstone-copilot
    ```
 
-2. **Set up virtual environment (Windows)**
+2. **Install dependencies**
    ```bash
-   # One-click setup
-   setup_venv.bat
-   
-   # Or manually:
-   python -m venv venv
-   venv\Scripts\activate.bat
    pip install -r requirements.txt
    ```
 
 3. **Run the bot**
    ```bash
-   # One-click run
-   run_with_venv.bat
-   
-   # Or manually:
-   venv\Scripts\activate.bat
    python launcher.py
    ```
 
-### Option 2: Global Installation (Legacy)
+### Virtual Environment (Recommended)
 
-1. **Clone or download this repository**
+1. **Create virtual environment**
    ```bash
-   git clone <repository-url>
-   cd hearthstone_bot
+   python -m venv venv
+   venv\Scripts\activate.bat
    ```
 
-2. **Install Python dependencies**
+2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Verify Tesseract installation**
-   ```bash
-   tesseract --version
-   ```
-
-## Configuration
-
-### Battle.net and Hearthstone Path Setup
-
-The bot needs to know where Battle.net and Hearthstone are installed. Edit `config.py` to set the correct paths:
-
-```python
-# Battle.net executable path
-BATTLENET_PATH = r"E:\Battle.net\battle.net.exe"
-
-# Hearthstone executable path (for verification)
-HEARTHSTONE_PATH = r"E:\Battle.net\Hearthstone\Hearthstone.exe"
-```
-
-The bot will automatically try alternative common paths if the main paths are not found.
-
-## Usage
-
-### Quick Start
-
-#### Option 1: GUI Mode (Recommended)
-1. **Check paths** using the "Check HS Path" button
-2. **Launch via Battle.net** using the "Launch via Battle.net" button
-3. **Run the launcher** to choose your interface:
+3. **Run the bot**
    ```bash
    python launcher.py
    ```
-4. **Select GUI Mode** and click the "Detect Hearthstone Window" button
-5. **Test components** to verify everything works
-6. **Start analysis mode** to see what the bot detects
-7. **Enable auto-play** when ready (use with caution!)
-
-#### Option 2: Command Line Mode
-1. **Start Hearthstone** and begin a game
-2. **Run the bot in test mode** to verify everything works:
-   ```bash
-   python main.py --test
-   ```
-
-3. **Run in analysis mode** (view only, no gameplay):
-   ```bash
-   python main.py --debug
-   ```
-
-4. **Run in auto-play mode** (full automation):
-   ```bash
-   python main.py --auto-play --debug
-   ```
-
-#### Option 3: CLI Monitoring (Parallel to GUI)
-1. **Start the CLI logger** in a separate terminal:
-   ```bash
-   # One-click CLI logger
-   run_cli_logger.bat
-   
-   # Or manually:
-   python cli_logger.py
-   ```
-
-2. **Use CLI commands** to monitor bot progress:
-   - `start` - Start monitoring bot activity
-   - `stop` - Stop monitoring
-   - `status` - Show current bot status and recent screenshots
-   - `help` - Show available commands
-   - `quit` - Exit CLI logger
-
-3. **Monitor in real-time** while the GUI bot is running
-
-### GUI Features
-
-The GUI provides a user-friendly interface with:
-- **🚀 Launch via Battle.net**: Automatically launches Battle.net and clicks the PLAY button
-- **🔍 Detect Window**: One-click Hearthstone window detection
-- **🧪 Test Components**: Verify all bot components work correctly
-- **📊 Analysis Mode**: Real-time game state analysis without playing
-- **🎮 Auto-Play Mode**: Full automation with safety confirmations
-- **📋 Status Display**: Live status indicators and game state information
-- **📝 Log Viewer**: Real-time log display with save/clear options
-- **🔧 Check HS Path**: Verify Battle.net and Hearthstone installation paths
-
-### Command Line Options
-
-- `--test`: Run component tests to verify everything works
-- `--debug`: Enable detailed logging
-- `--auto-play`: Enable automatic gameplay (use with caution!)
-
-### Safety Features
-
-- **Failsafe**: Move mouse to top-left corner to stop the bot
-- **Manual Override**: Press Ctrl+C to stop the bot
-- **GUI Controls**: Easy start/stop buttons with status indicators
-- **Analysis Mode**: Use analysis mode to see what the bot detects without playing
-
-## How It Works
-
-### 1. Window Detection
-The bot automatically finds the Hearthstone window and brings it to focus.
-
-### 2. Screenshot Capture
-Takes screenshots of the game window and extracts specific regions:
-- Hand area (bottom)
-- Board area (middle)
-- Mana crystals (top-left)
-- Health displays
-
-### 3. Card Recognition
-- **Computer Vision**: Detects card boundaries using contour detection
-- **OCR**: Extracts card names, costs, and stats using Tesseract
-- **Database Matching**: Matches recognized cards against a database
-
-### 4. Game State Analysis
-Analyzes:
-- Cards in hand and their playability
-- Minions on board (friendly and enemy)
-- Current mana and turn number
-- Game phase (mulligan, playing, etc.)
-
-### 5. AI Decision Making
-The AI considers:
-- Board control and trading opportunities
-- Mana efficiency
-- Card synergies
-- Defensive vs offensive plays
-
-### 6. Automation
-Safely executes moves using:
-- Precise mouse clicking
-- Card dragging
-- Turn ending
 
 ## Configuration
 
-### Card Database
-The bot includes a basic card database. You can expand it by:
-1. Adding more cards to `card_recognition/card_database.py`
-2. Creating a custom database file
-3. Implementing API integration with Hearthstone card databases
+### Battle.net Path
 
-### AI Difficulty
-Modify the AI behavior in `decision_engine/ai_engine.py`:
-- Change `self.difficulty` to "easy", "medium", or "hard"
-- Adjust decision weights and thresholds
-- Add more sophisticated strategies
+The bot automatically detects Battle.net installation. If it's not found, you can configure the path in the code:
 
-### Screen Regions
-Adjust screen region detection in `automation/window_utils.py`:
-- Modify the `regions` dictionary for different screen resolutions
-- Calibrate for different Hearthstone UI layouts
+```python
+# In services/window_service.py
+BATTLENET_PATHS = [
+    r"E:\Battle.net\battle.net.exe",  # Add your path here
+    r"C:\Program Files (x86)\Battle.net\Battle.net Launcher.exe",
+    # ... other common paths
+]
+```
+
+## Usage
+
+### GUI Mode (Recommended)
+
+1. **Launch the application**
+   ```bash
+   python launcher.py
+   ```
+
+2. **Use the GUI interface**
+   - Click "Start Bot" to begin automation
+   - Monitor progress in the log viewer
+   - Click "Stop Bot" to halt execution
+
+### Command Line Mode
+
+```bash
+python main.py
+```
+
+## How It Works
+
+### 1. Initialization
+- Sets up all services (logging, window, OCR, screenshot)
+- Initializes the bot controller with step classes
+- Creates the GUI interface
+
+### 2. Step Execution
+The bot executes steps sequentially:
+
+1. **OCR Management**: Ensures Umi-OCR service is running
+2. **Battle.net Launch**: Launches Battle.net (skipped if Hearthstone is running)
+3. **Play Button**: Finds and clicks the PLAY button
+4. **Hearthstone Navigation**: Navigates to home screen
+5. **Collection Access**: Accesses the card collection
+
+### 3. Error Handling
+- Each step has retry mechanisms
+- Comprehensive error logging with stack traces
+- Graceful degradation on failures
+
+### 4. State Management
+- Tracks bot progress through `BotContext`
+- Maintains step-specific data
+- Provides status updates to GUI
+
+## Key Features
+
+### Modular Design
+- **Separation of Concerns**: Each module has a specific responsibility
+- **Dependency Injection**: Services are passed to components
+- **Testability**: Each component can be tested independently
+- **Maintainability**: Easy to modify and extend
+
+### Robust Error Handling
+- **Custom Exceptions**: Structured error hierarchy
+- **Retry Mechanisms**: Automatic retry with exponential backoff
+- **Stack Traces**: Detailed error information for debugging
+- **Graceful Degradation**: Continues operation when possible
+
+### Advanced OCR
+- **Umi-OCR Integration**: High-accuracy text recognition
+- **Chinese Character Support**: Special handling for Chinese text
+- **Individual Character Detection**: Precise character-level recognition
+- **Region-based Search**: Efficient text search in specific areas
+
+### Window Management
+- **Intelligent Detection**: Finds windows by title and properties
+- **Focus Management**: Ensures windows are properly focused
+- **Handle Refresh**: Refreshes invalid window handles
+- **Size Validation**: Filters windows by size and state
+
+## Development
+
+### Adding New Steps
+
+1. **Create a new step class**
+   ```python
+   from steps.base_step import BaseStep
+   
+   class MyNewStep(BaseStep):
+       def execute(self, context: BotContext) -> BotContext:
+           # Implementation here
+           return context
+   ```
+
+2. **Add to bot controller**
+   ```python
+   # In core/bot_controller.py
+   self.steps.append(MyNewStep(self.services))
+   ```
+
+### Adding New Services
+
+1. **Create service class**
+   ```python
+   class MyService:
+       def __init__(self, logger):
+           self.logger = logger
+   ```
+
+2. **Register in main.py**
+   ```python
+   services['my_service'] = MyService(logger)
+   ```
+
+### Testing
+
+```bash
+# Test individual components
+python -c "from core import BotController; print('Core imports work')"
+python -c "from services import WindowService; print('Services work')"
+python -c "from steps import BaseStep; print('Steps work')"
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"Hearthstone window not found"**
-   - Make sure Hearthstone is running
-   - Try different window titles in `window_utils.py`
+1. **"Umi-OCR service not found"**
+   - Ensure Umi-OCR is in the project directory
+   - Check if the service is running on port 1224
 
-2. **"Tesseract not found"**
-   - Install Tesseract OCR
-   - Add to PATH environment variable
-   - Restart command prompt
+2. **"Battle.net window not found"**
+   - Verify Battle.net is installed
+   - Check the path configuration
 
-3. **Poor card recognition**
-   - Ensure good lighting and contrast
-   - Adjust OCR settings in `ocr_reader.py`
-   - Add more cards to the database
+3. **"Hearthstone not launching"**
+   - Ensure Hearthstone is installed via Battle.net
+   - Check if the PLAY button is visible
 
-4. **Incorrect mouse clicks**
-   - Calibrate screen regions for your resolution
-   - Check if Hearthstone is in windowed mode
-   - Verify window focus
+4. **"OCR not working"**
+   - Verify Umi-OCR is running
+   - Check the service status
 
 ### Debug Mode
-Use `--debug` flag to see detailed logs:
-```bash
-python main.py --debug
-```
 
-Logs are saved to `hearthstone_bot.log` for analysis.
+The bot includes comprehensive logging:
+- All operations are logged with timestamps
+- Error stack traces are captured
+- Debug screenshots are saved for analysis
+- GUI log viewer shows real-time progress
 
 ## Safety and Ethics
 
@@ -298,24 +296,10 @@ Logs are saved to `hearthstone_bot.log` for analysis.
 - **Risk**: Use at your own risk - account bans are possible
 
 ### Safe Usage
-1. **Test First**: Always run in test mode first
-2. **Analysis Mode**: Use analysis mode to understand what the bot sees
-3. **Manual Override**: Keep your hand near the mouse for emergency stops
-4. **Limited Use**: Don't run the bot for extended periods
-
-## Development
-
-### Adding New Features
-1. **New Card Types**: Extend the card database and recognition
-2. **Better AI**: Improve decision making algorithms
-3. **UI Integration**: Add a graphical interface
-4. **Statistics**: Track win rates and performance
-
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request
+1. **Test First**: Always test in a safe environment
+2. **Monitor**: Keep an eye on the bot's behavior
+3. **Manual Override**: Be ready to stop the bot if needed
+4. **Limited Use**: Don't run for extended periods
 
 ## License
 
@@ -325,7 +309,7 @@ This project is for educational purposes only. Use at your own risk.
 
 For issues and questions:
 1. Check the troubleshooting section
-2. Review the debug logs
+2. Review the logs in the GUI
 3. Test individual components
 4. Open an issue with detailed information
 

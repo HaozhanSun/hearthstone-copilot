@@ -21,12 +21,12 @@ def main():
         
         # Try to import our modules
         print("[INFO] Importing bot modules...")
-        import main_refactored
-        print("[OK] Refactored bot modules imported successfully")
+        import main
+        print("[OK] Bot modules imported successfully")
         
         # Start the GUI
         print("[INFO] Starting GUI...")
-        main_refactored.main()
+        main.main()
         
     except ImportError as e:
         print(f"[ERROR] Could not import bot modules: {e}")
