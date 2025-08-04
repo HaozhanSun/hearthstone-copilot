@@ -10,6 +10,7 @@ import time
 from pynput import keyboard
 from datetime import datetime
 from typing import Dict, Any
+import cv2
 
 from core import BotController, BotState
 
@@ -118,6 +119,10 @@ class MainWindow:
         
         self.debug_bottom_btn = ttk.Button(debug_frame, text="Screenshot Bottom", command=self.debug_screenshot_bottom)
         self.debug_bottom_btn.grid(row=0, column=4, padx=(0, 2), pady=5, sticky=(tk.W, tk.E))
+        
+        # Test OCR button
+        self.test_ocr_btn = ttk.Button(debug_frame, text="Test OCR", command=self.test_ocr_service)
+        self.test_ocr_btn.grid(row=1, column=0, columnspan=5, padx=(0, 2), pady=5, sticky=(tk.W, tk.E))
     
     def setup_status_panel(self, parent):
         """Setup status panel"""
@@ -330,35 +335,101 @@ Error: {status.get('error_message', 'None')}
             screenshot_service.save_screenshot(screenshot, filepath)
             self.logger.info(f"Debug screenshot saved: {filepath}")
             
-            # Detect text using OCR
+            # Detect text using OCR - try both English and Chinese
             self.logger.info(f"Detecting text in {region_name} region...")
-            text_results = ocr_service.detect_text(screenshot)
+            
+            # Try Chinese first, then English
+            text_results = []
+            try:
+                chinese_results = ocr_service.detect_text(screenshot, language="简体中文")
+                if chinese_results:
+                    text_results.extend(chinese_results)
+                    self.logger.info(f"Chinese OCR detected {len(chinese_results)} text elements")
+            except Exception as e:
+                self.logger.warning(f"Chinese OCR failed: {e}")
+            
+            try:
+                english_results = ocr_service.detect_text(screenshot, language="English")
+                if english_results:
+                    text_results.extend(english_results)
+                    self.logger.info(f"English OCR detected {len(english_results)} text elements")
+            except Exception as e:
+                self.logger.warning(f"English OCR failed: {e}")
             
             if text_results:
+                # Create debug image with rectangles
+                debug_image = screenshot.copy()
+                
                 # Filter and categorize detected text
                 chinese_text = []
                 numbers = []
                 symbols = []
                 other_text = []
                 
-                for result in text_results:
+                for i, result in enumerate(text_results):
                     text = result.get('text', '').strip()
                     if not text:
                         continue
                     
-                    # Categorize text
-                    has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text)
-                    has_numbers = any(char.isdigit() for char in text)
-                    has_symbols = any(not char.isalnum() and not char.isspace() and '\u4e00' <= char <= '\u9fff' for char in text)
+                    # Get bounding box coordinates
+                    box = result.get('box', [])
+                    if len(box) >= 4:
+                        # Extract coordinates (box format: [[x1,y1], [x2,y1], [x2,y2], [x1,y2]])
+                        x1, y1 = int(float(box[0][0])), int(float(box[0][1]))
+                        x2, y2 = int(float(box[2][0])), int(float(box[2][1]))
+                        width = x2 - x1
+                        height = y2 - y1
+                        
+                        # Categorize text
+                        has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text)
+                        has_numbers = any(char.isdigit() for char in text)
+                        has_symbols = any(not char.isalnum() and not char.isspace() and not '\u4e00' <= char <= '\u9fff' for char in text)
+                        
+                        # Determine color and category
+                        if has_chinese:
+                            color = (0, 255, 0)  # Green for Chinese
+                            chinese_text.append(text)
+                            category = "CHINESE"
+                        elif has_numbers:
+                            color = (255, 0, 0)  # Red for numbers
+                            numbers.append(text)
+                            category = "NUMBER"
+                        elif has_symbols:
+                            color = (0, 0, 255)  # Blue for symbols
+                            symbols.append(text)
+                            category = "SYMBOL"
+                        else:
+                            color = (255, 255, 0)  # Yellow for other
+                            other_text.append(text)
+                            category = "OTHER"
+                        
+                        # Draw rectangle and label
+                        cv2.rectangle(debug_image, (x1, y1), (x2, y2), color, 2)
+                        label = f"{category}: {text[:20]}"  # Truncate long text
+                        cv2.putText(debug_image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                        
+                        self.logger.info(f"Detected {category}: '{text}' at ({x1},{y1}) size ({width}x{height})")
                     
-                    if has_chinese:
-                        chinese_text.append(text)
-                    elif has_numbers:
-                        numbers.append(text)
-                    elif has_symbols:
-                        symbols.append(text)
                     else:
-                        other_text.append(text)
+                        # No bounding box, just categorize text
+                        has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text)
+                        has_numbers = any(char.isdigit() for char in text)
+                        has_symbols = any(not char.isalnum() and not char.isspace() and not '\u4e00' <= char <= '\u9fff' for char in text)
+                        
+                        if has_chinese:
+                            chinese_text.append(text)
+                        elif has_numbers:
+                            numbers.append(text)
+                        elif has_symbols:
+                            symbols.append(text)
+                        else:
+                            other_text.append(text)
+                
+                # Save debug image with rectangles
+                debug_filename = f"debug_{region_name}_annotated_{timestamp}.png"
+                debug_filepath = os.path.join(debug_dir, debug_filename)
+                screenshot_service.save_screenshot(debug_image, debug_filepath)
+                self.logger.info(f"Annotated debug screenshot saved: {debug_filepath}")
                 
                 # Log results
                 self.logger.info(f"=== TEXT DETECTION RESULTS FOR {region_name.upper()} REGION ===")
@@ -391,6 +462,64 @@ Error: {status.get('error_message', 'None')}
                 
         except Exception as e:
             self.logger.error(f"Error in debug screenshot {region_name}: {e}")
+            import traceback
+            self.logger.error(f"Stack trace: {traceback.format_exc()}")
+    
+    def test_ocr_service(self):
+        """Test OCR service status and basic functionality"""
+        try:
+            ocr_service = self.services.get('ocr')
+            if not ocr_service:
+                self.logger.error("OCR service not available")
+                return
+            
+            self.logger.info("=== TESTING OCR SERVICE ===")
+            
+            # Test service status
+            status = ocr_service.check_service_status()
+            self.logger.info(f"OCR service status: {'ONLINE' if status else 'OFFLINE'}")
+            
+            if not status:
+                self.logger.error("OCR service is offline. Please start Umi-OCR.")
+                return
+            
+            # Test with a simple screenshot
+            screenshot_service = self.services.get('screenshot')
+            if screenshot_service:
+                self.logger.info("Taking test screenshot...")
+                screenshot = screenshot_service.capture_screen()
+                
+                if screenshot is not None:
+                    self.logger.info("Testing Chinese OCR...")
+                    try:
+                        chinese_results = ocr_service.detect_text(screenshot, language="简体中文")
+                        self.logger.info(f"Chinese OCR test: {len(chinese_results)} results")
+                        for i, result in enumerate(chinese_results[:5]):  # Show first 5 results
+                            text = result.get('text', '').strip()
+                            if text:
+                                self.logger.info(f"  Chinese result {i+1}: '{text}'")
+                    except Exception as e:
+                        self.logger.error(f"Chinese OCR test failed: {e}")
+                    
+                    self.logger.info("Testing English OCR...")
+                    try:
+                        english_results = ocr_service.detect_text(screenshot, language="English")
+                        self.logger.info(f"English OCR test: {len(english_results)} results")
+                        for i, result in enumerate(english_results[:5]):  # Show first 5 results
+                            text = result.get('text', '').strip()
+                            if text:
+                                self.logger.info(f"  English result {i+1}: '{text}'")
+                    except Exception as e:
+                        self.logger.error(f"English OCR test failed: {e}")
+                else:
+                    self.logger.error("Failed to capture test screenshot")
+            else:
+                self.logger.error("Screenshot service not available")
+            
+            self.logger.info("=== OCR SERVICE TEST COMPLETE ===")
+            
+        except Exception as e:
+            self.logger.error(f"Error testing OCR service: {e}")
             import traceback
             self.logger.error(f"Stack trace: {traceback.format_exc()}")
     
