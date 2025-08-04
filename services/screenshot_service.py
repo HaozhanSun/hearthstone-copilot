@@ -15,15 +15,18 @@ class ScreenshotService:
     def __init__(self, logger):
         self.logger = logger
     
-    def capture_screen(self) -> Optional[np.ndarray]:
-        """Capture full screen screenshot"""
+    def capture_screen(self, region: Optional[Tuple[int, int, int, int]] = None) -> Optional[np.ndarray]:
+        """Capture full screen screenshot or region"""
         try:
-            screenshot = pyautogui.screenshot()
+            if region:
+                screenshot = pyautogui.screenshot(region=region)
+            else:
+                screenshot = pyautogui.screenshot()
             screenshot_np = np.array(screenshot)
             screenshot_rgb = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
             return screenshot_rgb
         except Exception as e:
-            self.logger.error(f"Error capturing full screen: {e}")
+            self.logger.error(f"Error capturing screen: {e}")
             return None
     
     def capture_window(self, x: int, y: int, width: int, height: int) -> Optional[np.ndarray]:
@@ -100,4 +103,13 @@ class ScreenshotService:
     def get_image_size(self, image: np.ndarray) -> Tuple[int, int]:
         """Get image dimensions"""
         height, width = image.shape[:2]
-        return width, height 
+        return width, height
+    
+    def save_screenshot(self, image: np.ndarray, filepath: str) -> bool:
+        """Save screenshot to file"""
+        try:
+            cv2.imwrite(filepath, image)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving screenshot to {filepath}: {e}")
+            return False 

@@ -58,7 +58,7 @@ class MainWindow:
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, minsize=400)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(2, weight=1)
+        main_frame.rowconfigure(3, weight=1)  # Changed from 2 to 3 due to debug frame
         
         # Title
         title_label = ttk.Label(main_frame, text="Hearthstone Bot - Refactored Control Panel", 
@@ -79,7 +79,7 @@ class MainWindow:
         control_frame = ttk.LabelFrame(parent, text="Controls", padding="10")
         control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        # Configure button layout
+        # Configure button layout for 3 columns
         for i in range(3):
             control_frame.columnconfigure(i, weight=1)
         
@@ -94,11 +94,35 @@ class MainWindow:
         # Clear logs button
         self.clear_btn = ttk.Button(control_frame, text="Clear Logs", command=self.clear_logs)
         self.clear_btn.grid(row=0, column=2, padx=(0, 5), pady=5, sticky=(tk.W, tk.E))
+        
+        # Debug utilities frame
+        debug_frame = ttk.LabelFrame(parent, text="Debug Utilities", padding="10")
+        debug_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(10, 0))
+        
+        # Configure debug button layout for 5 columns
+        for i in range(5):
+            debug_frame.columnconfigure(i, weight=1)
+        
+        # Debug screenshot buttons
+        self.debug_whole_btn = ttk.Button(debug_frame, text="Screenshot Whole", command=self.debug_screenshot_whole)
+        self.debug_whole_btn.grid(row=0, column=0, padx=(0, 2), pady=5, sticky=(tk.W, tk.E))
+        
+        self.debug_left_btn = ttk.Button(debug_frame, text="Screenshot Left", command=self.debug_screenshot_left)
+        self.debug_left_btn.grid(row=0, column=1, padx=(0, 2), pady=5, sticky=(tk.W, tk.E))
+        
+        self.debug_right_btn = ttk.Button(debug_frame, text="Screenshot Right", command=self.debug_screenshot_right)
+        self.debug_right_btn.grid(row=0, column=2, padx=(0, 2), pady=5, sticky=(tk.W, tk.E))
+        
+        self.debug_top_btn = ttk.Button(debug_frame, text="Screenshot Top", command=self.debug_screenshot_top)
+        self.debug_top_btn.grid(row=0, column=3, padx=(0, 2), pady=5, sticky=(tk.W, tk.E))
+        
+        self.debug_bottom_btn = ttk.Button(debug_frame, text="Screenshot Bottom", command=self.debug_screenshot_bottom)
+        self.debug_bottom_btn.grid(row=0, column=4, padx=(0, 2), pady=5, sticky=(tk.W, tk.E))
     
     def setup_status_panel(self, parent):
         """Setup status panel"""
         status_frame = ttk.LabelFrame(parent, text="Status", padding="10")
-        status_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N), pady=(0, 10))
+        status_frame.grid(row=3, column=0, sticky=(tk.W, tk.E, tk.N), pady=(0, 10))
         status_frame.columnconfigure(1, weight=1)
         
         # Status indicators
@@ -121,7 +145,7 @@ class MainWindow:
     def setup_log_panel(self, parent):
         """Setup log panel"""
         log_frame = ttk.LabelFrame(parent, text="Logs", padding="10")
-        log_frame.grid(row=0, column=1, rowspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0))
+        log_frame.grid(row=0, column=1, rowspan=4, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0))
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
         
@@ -234,6 +258,141 @@ Error: {status.get('error_message', 'None')}
     def clear_logs(self):
         """Clear the log display"""
         self.log_text.delete(1.0, tk.END)
+    
+    def debug_screenshot_whole(self):
+        """Take screenshot of whole screen and detect text"""
+        self._debug_screenshot_region("whole", None)
+    
+    def debug_screenshot_left(self):
+        """Take screenshot of left half of screen and detect text"""
+        import pyautogui
+        screen_width, screen_height = pyautogui.size()
+        region = (0, 0, screen_width // 2, screen_height)
+        self._debug_screenshot_region("left", region)
+    
+    def debug_screenshot_right(self):
+        """Take screenshot of right half of screen and detect text"""
+        import pyautogui
+        screen_width, screen_height = pyautogui.size()
+        region = (screen_width // 2, 0, screen_width // 2, screen_height)
+        self._debug_screenshot_region("right", region)
+    
+    def debug_screenshot_top(self):
+        """Take screenshot of top half of screen and detect text"""
+        import pyautogui
+        screen_width, screen_height = pyautogui.size()
+        region = (0, 0, screen_width, screen_height // 2)
+        self._debug_screenshot_region("top", region)
+    
+    def debug_screenshot_bottom(self):
+        """Take screenshot of bottom half of screen and detect text"""
+        import pyautogui
+        screen_width, screen_height = pyautogui.size()
+        region = (0, screen_height // 2, screen_width, screen_height // 2)
+        self._debug_screenshot_region("bottom", region)
+    
+    def _debug_screenshot_region(self, region_name, region):
+        """Take screenshot of specified region and detect text"""
+        try:
+            import pyautogui
+            from datetime import datetime
+            import os
+            
+            # Get services
+            screenshot_service = self.services.get('screenshot')
+            ocr_service = self.services.get('ocr')
+            
+            if not screenshot_service or not ocr_service:
+                self.logger.error("Screenshot or OCR service not available")
+                return
+            
+            # Take screenshot
+            if region:
+                self.logger.info(f"Taking screenshot of {region_name} region: {region}")
+                screenshot = screenshot_service.capture_screen(region=region)
+            else:
+                self.logger.info(f"Taking screenshot of whole screen")
+                screenshot = screenshot_service.capture_screen()
+            
+            if screenshot is None:
+                self.logger.error("Failed to capture screenshot")
+                return
+            
+            # Save screenshot
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+            filename = f"debug_{region_name}_{timestamp}.png"
+            
+            # Create debug directory if it doesn't exist
+            debug_dir = "logs/screenshots/debug"
+            os.makedirs(debug_dir, exist_ok=True)
+            
+            filepath = os.path.join(debug_dir, filename)
+            screenshot_service.save_screenshot(screenshot, filepath)
+            self.logger.info(f"Debug screenshot saved: {filepath}")
+            
+            # Detect text using OCR
+            self.logger.info(f"Detecting text in {region_name} region...")
+            text_results = ocr_service.detect_text(screenshot)
+            
+            if text_results:
+                # Filter and categorize detected text
+                chinese_text = []
+                numbers = []
+                symbols = []
+                other_text = []
+                
+                for result in text_results:
+                    text = result.get('text', '').strip()
+                    if not text:
+                        continue
+                    
+                    # Categorize text
+                    has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text)
+                    has_numbers = any(char.isdigit() for char in text)
+                    has_symbols = any(not char.isalnum() and not char.isspace() and '\u4e00' <= char <= '\u9fff' for char in text)
+                    
+                    if has_chinese:
+                        chinese_text.append(text)
+                    elif has_numbers:
+                        numbers.append(text)
+                    elif has_symbols:
+                        symbols.append(text)
+                    else:
+                        other_text.append(text)
+                
+                # Log results
+                self.logger.info(f"=== TEXT DETECTION RESULTS FOR {region_name.upper()} REGION ===")
+                self.logger.info(f"Total text elements detected: {len(text_results)}")
+                
+                if chinese_text:
+                    self.logger.info(f"Chinese text ({len(chinese_text)}): {chinese_text}")
+                else:
+                    self.logger.info("No Chinese text detected")
+                
+                if numbers:
+                    self.logger.info(f"Numbers ({len(numbers)}): {numbers}")
+                else:
+                    self.logger.info("No numbers detected")
+                
+                if symbols:
+                    self.logger.info(f"Symbols ({len(symbols)}): {symbols}")
+                else:
+                    self.logger.info("No symbols detected")
+                
+                if other_text:
+                    self.logger.info(f"Other text ({len(other_text)}): {other_text}")
+                else:
+                    self.logger.info("No other text detected")
+                
+                self.logger.info("=== END TEXT DETECTION RESULTS ===")
+                
+            else:
+                self.logger.warning(f"No text detected in {region_name} region")
+                
+        except Exception as e:
+            self.logger.error(f"Error in debug screenshot {region_name}: {e}")
+            import traceback
+            self.logger.error(f"Stack trace: {traceback.format_exc()}")
     
     def setup_global_hotkeys(self):
         """Setup global hotkeys for F10 (start) and F12 (stop)"""
