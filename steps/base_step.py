@@ -51,7 +51,8 @@ class BaseStep(ABC):
             
             if attempt < max_retries:
                 self.logger.warning(f"Failed to focus window (attempt {attempt + 1}), retrying...")
-                # Could add window refresh logic here if needed
+                import time
+                time.sleep(0.5)  # Small delay between attempts
         
         return False
     

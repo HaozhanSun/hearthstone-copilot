@@ -26,7 +26,14 @@ def main():
         
         # Start the GUI
         print("[INFO] Starting GUI...")
-        main.main()
+        try:
+            main.main()
+        except KeyboardInterrupt:
+            print("\n\nReceived Ctrl+C, exiting...")
+        except Exception as e:
+            print(f"[ERROR] GUI error: {e}")
+        finally:
+            print("[INFO] GUI closed, launcher exiting...")
         
     except ImportError as e:
         print(f"[ERROR] Could not import bot modules: {e}")

@@ -23,6 +23,10 @@ class MainWindow:
         self.services = services
         self.logger = services['logger']
         
+        # Add button debouncing
+        self.last_button_click_time = 0
+        self.button_debounce_delay = 1.0  # 1 second debounce
+        
         # Setup GUI
         self.setup_window()
         self.setup_gui()
@@ -194,6 +198,16 @@ class MainWindow:
     
     def toggle_bot(self):
         """Toggle bot on/off"""
+        import time
+        
+        # Add debouncing to prevent double clicks
+        current_time = time.time()
+        if current_time - self.last_button_click_time < self.button_debounce_delay:
+            self.logger.warning("Button click ignored due to debouncing")
+            return
+        
+        self.last_button_click_time = current_time
+        
         if self.bot_controller.is_running():
             self.logger.info("GUI: Stopping bot via button")
             self.bot_controller.stop()
@@ -231,10 +245,10 @@ Error: {status.get('error_message', 'None')}
             })
             
             # Start listening in a separate thread
-            self.keyboard_thread = threading.Thread(target=self.keyboard_listener.start, daemon=True)
+            self.keyboard_thread = threading.Thread(target=self.keyboard_listener.start, daemon=True, name="KeyboardListenerThread")
             self.keyboard_thread.start()
             
-            self.logger.info("Global hotkeys enabled: F10 (Start), F12 (Stop)")
+            self.logger.info(f"Global hotkeys enabled: F10 (Start), F12 (Stop) - Thread ID: {self.keyboard_thread.ident}")
             
         except Exception as e:
             self.logger.error(f"Failed to setup global hotkeys: {e}")
@@ -242,8 +256,8 @@ Error: {status.get('error_message', 'None')}
     def start_bot_hotkey(self):
         """Handle F10 hotkey to start bot"""
         try:
+            self.logger.info("F10 pressed - Starting bot")
             if not self.bot_controller.is_running():
-                self.logger.info("F10 pressed - Starting bot")
                 # Use after() to ensure thread safety
                 self.root.after(0, self.bot_controller.start)
             else:
@@ -266,7 +280,66 @@ Error: {status.get('error_message', 'None')}
     def cleanup(self):
         """Cleanup resources when window is closed"""
         try:
+            self.logger.info("=== CLEANUP START ===")
+            
+            # Stop the bot if it's running first
+            if self.bot_controller.is_running():
+                self.logger.info("Stopping bot during cleanup")
+                self.bot_controller.stop()
+            
+            # Stop the keyboard listener
             if hasattr(self, 'keyboard_listener'):
-                self.keyboard_listener.stop()
+                try:
+                    self.logger.info(f"Stopping keyboard listener...")
+                    self.keyboard_listener.stop()
+                    self.logger.info("Keyboard listener stopped")
+                except Exception as e:
+                    self.logger.error(f"Error stopping keyboard listener: {e}")
+            
+            # Force terminate keyboard thread if it's still alive
+            if hasattr(self, 'keyboard_thread') and self.keyboard_thread.is_alive():
+                try:
+                    self.logger.info(f"Keyboard thread still alive (ID: {self.keyboard_thread.ident}), attempting to join...")
+                    self.keyboard_thread.join(timeout=1)
+                    if self.keyboard_thread.is_alive():
+                        self.logger.warning(f"Keyboard thread did not stop (ID: {self.keyboard_thread.ident}), forcing termination")
+                        # Force terminate by setting daemon and letting it die
+                        self.keyboard_thread.daemon = True
+                        # Try to force kill the thread using a more aggressive approach
+                        import ctypes
+                        try:
+                            thread_id = self.keyboard_thread.ident
+                            if thread_id:
+                                self.logger.info(f"Attempting to terminate thread {thread_id} using ctypes...")
+                                res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(thread_id), ctypes.py_object(SystemExit))
+                                if res > 1:
+                                    ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
+                                    self.logger.warning("Thread termination failed")
+                                else:
+                                    self.logger.info("Thread termination signal sent")
+                        except Exception as e:
+                            self.logger.error(f"Error terminating thread: {e}")
+                    else:
+                        self.logger.info("Keyboard thread joined successfully")
+                except Exception as e:
+                    self.logger.error(f"Error joining keyboard thread: {e}")
+            
+            # Cancel any pending GUI updates
+            try:
+                self.logger.info("Cancelling pending GUI updates...")
+                self.root.after_cancel("all")
+                self.logger.info("GUI updates cancelled")
+            except:
+                self.logger.warning("Could not cancel GUI updates")
+            
+            # List all active threads for debugging
+            import threading
+            active_threads = threading.enumerate()
+            self.logger.info(f"Active threads at cleanup: {len(active_threads)}")
+            for i, thread in enumerate(active_threads):
+                self.logger.info(f"  Thread {i+1}: {thread.name} (ID: {thread.ident}, Daemon: {thread.daemon}, Alive: {thread.is_alive()})")
+            
+            self.logger.info("=== CLEANUP COMPLETE ===")
+            
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}") 

@@ -45,12 +45,43 @@ class PlayButtonStep(BaseStep):
                     raise StepException(self.get_step_name(), "Battle.net window not found")
                 context.step_data['battlenet_window'] = battlenet_window
             
-            # Focus the window with retry logic
-            if not self.focus_window_with_retry(battlenet_window, window_service, max_retries=1):
-                raise StepException(self.get_step_name(), "Failed to focus Battle.net window")
+            # Wait for Battle.net to fully load before attempting to focus
+            self.logger.info("Waiting 3 seconds for Battle.net to fully load...")
+            time.sleep(3)
             
-            # Get window region
-            x, y, width, height = window_service.get_window_region(battlenet_window)
+            # Focus the window with retry logic (5 retries every 2 seconds)
+            max_retries = 5
+            for attempt in range(max_retries):
+                if self.focus_window_with_retry(battlenet_window, window_service, max_retries=1):
+                    break
+                
+                if attempt < max_retries - 1:
+                    self.logger.warning(f"Failed to focus Battle.net window, attempt {attempt + 1}/{max_retries}, retrying in 2 seconds...")
+                    time.sleep(2)
+                    
+                    # Try to refresh the window handle
+                    self.logger.info("Refreshing Battle.net window handle...")
+                    battlenet_window = window_service.find_battlenet_window()
+                    if not battlenet_window:
+                        raise StepException(self.get_step_name(), "Battle.net window not found after refresh")
+                    context.step_data['battlenet_window'] = battlenet_window
+                else:
+                    raise StepException(self.get_step_name(), "Failed to focus Battle.net window after 5 attempts")
+            
+            # Get window region with retry
+            region_success = False
+            for attempt in range(3):
+                try:
+                    x, y, width, height = window_service.get_window_region(battlenet_window)
+                    region_success = True
+                    break
+                except Exception as e:
+                    self.logger.warning(f"Failed to get window region (attempt {attempt + 1}): {e}")
+                    if attempt < 2:  # Don't sleep on last attempt
+                        time.sleep(1)
+            
+            if not region_success:
+                raise StepException(self.get_step_name(), "Failed to get window region after 3 attempts")
             
             # Try to find and click PLAY button
             max_attempts = 10

@@ -36,39 +36,74 @@ class HearthstoneNavigationStep(BaseStep):
             screenshot_service = self.get_service('screenshot')
             ocr_service = self.get_service('ocr')
             
-            # Wait for Hearthstone to launch
-            self.logger.info("Waiting for Hearthstone to launch...")
-            time.sleep(8)
+            # Wait for Hearthstone to launch and look for "点击开始" with retries
+            self.logger.info("Waiting for Hearthstone to launch and looking for '点击开始'...")
+            time.sleep(15)  # Give Hearthstone more time to launch
             
-            # Wait additional time before looking for navigation elements
-            time.sleep(20)
+            # Retry up to 10 times every 3 seconds to find "点击开始"
+            max_retries = 10
+            for attempt in range(max_retries):
+                # Find Hearthstone window
+                hearthstone_window = window_service.find_hearthstone_window()
+                if not hearthstone_window:
+                    if attempt < max_retries - 1:
+                        self.logger.info(f"Hearthstone window not found, attempt {attempt + 1}/{max_retries}, retrying in 3 seconds...")
+                        time.sleep(3)
+                        continue
+                    else:
+                        raise StepException(self.get_step_name(), "Hearthstone window not found after 10 attempts")
+                
+                # Focus the window with retry logic
+                if not self.focus_window_with_retry(hearthstone_window, window_service):
+                    if attempt < max_retries - 1:
+                        self.logger.info(f"Failed to focus Hearthstone window, attempt {attempt + 1}/{max_retries}, retrying in 3 seconds...")
+                        time.sleep(3)
+                        continue
+                    else:
+                        raise StepException(self.get_step_name(), "Failed to focus Hearthstone window after 10 attempts")
+                
+                # Get window region with retry
+                region_success = False
+                for region_attempt in range(3):
+                    try:
+                        x, y, width, height = window_service.get_window_region(hearthstone_window)
+                        region_success = True
+                        break
+                    except Exception as e:
+                        self.logger.warning(f"Failed to get Hearthstone window region (attempt {region_attempt + 1}): {e}")
+                        if region_attempt < 2:  # Don't sleep on last attempt
+                            time.sleep(1)
+                
+                if not region_success:
+                    if attempt < max_retries - 1:
+                        self.logger.info(f"Failed to get window region, attempt {attempt + 1}/{max_retries}, retrying in 3 seconds...")
+                        time.sleep(3)
+                        continue
+                    else:
+                        raise StepException(self.get_step_name(), "Failed to get Hearthstone window region after 3 attempts")
+                
+                # Check if already at home screen
+                if self._check_home_screen(hearthstone_window):
+                    self.logger.info("Already at home screen")
+                    context.update_state(BotState.ACCESSING_COLLECTION)
+                    return context
+                
+                # Look for "点击开始" button
+                if self._find_and_click_text(hearthstone_window, "点击开始", "bottom", window_service, screenshot_service, ocr_service):
+                    self.logger.info("Clicked '点击开始' button")
+                    time.sleep(3)  # Wait for home screen to load
+                    context.update_state(BotState.ACCESSING_COLLECTION)
+                    return context
+                
+                # If we get here, "点击开始" was not found
+                if attempt < max_retries - 1:
+                    self.logger.info(f"'点击开始' not found, attempt {attempt + 1}/{max_retries}, retrying in 3 seconds...")
+                    time.sleep(3)
+                else:
+                    raise StepException(self.get_step_name(), "Could not find '点击开始' button after 10 attempts")
             
-            # Find Hearthstone window
-            hearthstone_window = window_service.find_hearthstone_window()
-            if not hearthstone_window:
-                raise StepException(self.get_step_name(), "Hearthstone window not found")
-            
-            # Focus the window with retry logic
-            if not self.focus_window_with_retry(hearthstone_window, window_service):
-                raise StepException(self.get_step_name(), "Failed to focus Hearthstone window")
-            
-            # Get window region
-            x, y, width, height = window_service.get_window_region(hearthstone_window)
-            
-            # Check if already at home screen
-            if self._check_home_screen(hearthstone_window):
-                self.logger.info("Already at home screen")
-                context.update_state(BotState.ACCESSING_COLLECTION)
-                return context
-            
-            # Look for "点击开始" button
-            if self._find_and_click_text(hearthstone_window, "点击开始", "bottom", window_service, screenshot_service, ocr_service):
-                self.logger.info("Clicked '点击开始' button")
-                time.sleep(3)  # Wait for home screen to load
-                context.update_state(BotState.ACCESSING_COLLECTION)
-                return context
-            else:
-                raise StepException(self.get_step_name(), "Could not find '点击开始' button")
+            # This should never be reached, but just in case
+            raise StepException(self.get_step_name(), "Unexpected error in retry loop")
             
         except Exception as e:
             if isinstance(e, StepException):
@@ -101,7 +136,21 @@ class HearthstoneNavigationStep(BaseStep):
                             window_service, screenshot_service, ocr_service) -> bool:
         """Find and click text in Hearthstone window"""
         try:
-            x, y, width, height = window_service.get_window_region(window)
+            # Get window region with retry
+            region_success = False
+            for region_attempt in range(3):
+                try:
+                    x, y, width, height = window_service.get_window_region(window)
+                    region_success = True
+                    break
+                except Exception as e:
+                    self.logger.warning(f"Failed to get window region in _find_and_click_text (attempt {region_attempt + 1}): {e}")
+                    if region_attempt < 2:  # Don't sleep on last attempt
+                        time.sleep(1)
+            
+            if not region_success:
+                self.logger.error("Failed to get window region in _find_and_click_text after 3 attempts")
+                return False
             
             # Take screenshot safely
             screenshot = self.capture_screenshot_safe(screenshot_service, x, y, width, height)

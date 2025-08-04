@@ -122,7 +122,18 @@ class WindowService:
     
     def get_window_region(self, window: gw.Window) -> Tuple[int, int, int, int]:
         """Get window region as (x, y, width, height)"""
-        return (window.left, window.top, window.width, window.height)
+        try:
+            # Try to access window properties with error handling
+            left = window.left
+            top = window.top
+            width = window.width
+            height = window.height
+            
+            return (left, top, width, height)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting window region: {e}")
+            raise Exception(f"Invalid window handle: {e}")
     
     def click_in_window(self, window: gw.Window, x: int, y: int) -> bool:
         """Click at relative coordinates within a window"""

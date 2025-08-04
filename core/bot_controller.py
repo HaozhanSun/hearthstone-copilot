@@ -28,6 +28,7 @@ class BotController:
         self.running = False
         self.stop_event = threading.Event()
         self.execution_thread: Optional[threading.Thread] = None
+        self.start_lock = threading.Lock()  # Add lock to prevent multiple simultaneous starts
     
     def _initialize_steps(self) -> List[BaseStep]:
         """Initialize all bot steps"""
@@ -41,24 +42,42 @@ class BotController:
     
     def start(self) -> None:
         """Start the bot"""
-        if self.running:
-            self.logger.warning("Bot is already running")
+        import threading
+        import time
+        
+        # Use lock to prevent multiple simultaneous starts
+        if not self.start_lock.acquire(blocking=False):
+            self.logger.warning("Bot start already in progress")
             return
         
-        # Additional check to prevent race conditions
-        if hasattr(self, 'execution_thread') and self.execution_thread and self.execution_thread.is_alive():
-            self.logger.warning("Bot execution thread is already alive")
-            return
-        
-        self.running = True
-        self.stop_event.clear()
-        self.context = BotContext(state=BotState.STARTING)
-        
-        # Start execution in a separate thread
-        self.execution_thread = threading.Thread(target=self._run, daemon=True)
-        self.execution_thread.start()
-        
-        self.logger.info("Bot started")
+        try:
+            if self.running:
+                self.logger.warning("Bot is already running")
+                return
+            
+            # Additional check to prevent race conditions
+            if hasattr(self, 'execution_thread') and self.execution_thread and self.execution_thread.is_alive():
+                self.logger.warning("Bot execution thread is already alive")
+                return
+            
+            # Set running flag BEFORE starting thread to prevent race conditions
+            self.running = True
+            self.stop_event.clear()
+            self.context = BotContext(state=BotState.STARTING)
+            
+            # Start execution in a separate thread
+            self.execution_thread = threading.Thread(target=self._run, daemon=True, name="BotExecutionThread")
+            self.execution_thread.start()
+            
+            self.logger.info("Bot started successfully")
+        except Exception as e:
+            # Reset state if thread creation fails
+            self.running = False
+            self.execution_thread = None
+            self.logger.error(f"Failed to start bot: {e}")
+            raise
+        finally:
+            self.start_lock.release()
     
     def stop(self) -> None:
         """Stop the bot"""
@@ -68,8 +87,16 @@ class BotController:
         self.running = False
         self.stop_event.set()
         
+        # Force terminate execution thread
         if self.execution_thread and self.execution_thread.is_alive():
-            self.execution_thread.join(timeout=5)
+            try:
+                self.execution_thread.join(timeout=2)
+                if self.execution_thread.is_alive():
+                    self.logger.warning("Execution thread did not stop, forcing termination")
+                    # Cannot set daemon on active thread, just log and continue
+                    self.logger.info("Thread will be terminated when process exits")
+            except Exception as e:
+                self.logger.error(f"Error stopping execution thread: {e}")
         
         self.context.update_state(BotState.STOPPED)
         self.logger.info("Bot stopped")
@@ -77,7 +104,6 @@ class BotController:
     def _run(self) -> None:
         """Main bot execution loop"""
         try:
-            self.logger.info("Starting bot execution...")
             
             for step in self.steps:
                 # Check if bot should stop
@@ -91,6 +117,8 @@ class BotController:
                     continue
                 
                 # Execute step
+                step_name = step.get_step_name()
+                self.logger.info(f"Executing step: {step_name}")
                 self.context = step.run(self.context)
                 
                 # Check for errors
