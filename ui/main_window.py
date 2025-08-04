@@ -356,6 +356,44 @@ Error: {status.get('error_message', 'None')}
             except Exception as e:
                 self.logger.warning(f"English OCR failed: {e}")
             
+            # Remove duplicates and overlapping detections
+            unique_results = []
+            for result in text_results:
+                text = result.get('text', '').strip()
+                box = result.get('box', [])
+                
+                if not text or len(box) < 4:
+                    continue
+                
+                # Check if this detection overlaps significantly with existing ones
+                x1, y1 = int(float(box[0][0])), int(float(box[0][1]))
+                x2, y2 = int(float(box[2][0])), int(float(box[2][1]))
+                
+                is_duplicate = False
+                for existing in unique_results:
+                    existing_box = existing.get('box', [])
+                    if len(existing_box) >= 4:
+                        ex1, ey1 = int(float(existing_box[0][0])), int(float(existing_box[0][1]))
+                        ex2, ey2 = int(float(existing_box[2][0])), int(float(existing_box[2][1]))
+                        
+                        # Check for significant overlap (more than 50%)
+                        overlap_x = max(0, min(x2, ex2) - max(x1, ex1))
+                        overlap_y = max(0, min(y2, ey2) - max(y1, ey1))
+                        overlap_area = overlap_x * overlap_y
+                        
+                        area1 = (x2 - x1) * (y2 - y1)
+                        area2 = (ex2 - ex1) * (ey2 - ey1)
+                        
+                        if overlap_area > 0.5 * min(area1, area2):
+                            is_duplicate = True
+                            break
+                
+                if not is_duplicate:
+                    unique_results.append(result)
+            
+            text_results = unique_results
+            self.logger.info(f"After deduplication: {len(text_results)} unique text elements")
+            
             if text_results:
                 # Create debug image with rectangles
                 debug_image = screenshot.copy()
@@ -405,10 +443,14 @@ Error: {status.get('error_message', 'None')}
                         
                         # Draw rectangle and label
                         cv2.rectangle(debug_image, (x1, y1), (x2, y2), color, 2)
-                        label = f"{category}: {text[:20]}"  # Truncate long text
-                        cv2.putText(debug_image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                         
-                        self.logger.info(f"Detected {category}: '{text}' at ({x1},{y1}) size ({width}x{height})")
+                        # Create label without Chinese characters for cv2.putText (which doesn't support Chinese)
+                        # Use a simple identifier instead
+                        label_id = f"{category}_{i+1}"
+                        cv2.putText(debug_image, label_id, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                        
+                        # Log the actual text content
+                        self.logger.info(f"  {label_id}: '{text}' at ({x1},{y1}) size ({width}x{height})")
                     
                     else:
                         # No bounding box, just categorize text
