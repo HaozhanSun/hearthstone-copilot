@@ -89,6 +89,14 @@ The analysis script will show:
 
 ## Common Issues and Solutions
 
+### Issue: Process hanging on exit
+**Problem**: The bot process doesn't terminate cleanly when closing the GUI
+**Solution**: The bot now includes:
+- Aggressive thread termination using ctypes
+- 5-second timeout for cleanup operations
+- Force exit with `os._exit()` if cleanup fails
+- Enhanced pynput keyboard listener cleanup
+
 ### Issue: No "PLAY" text detected
 **Possible causes:**
 - Text is too small or blurry

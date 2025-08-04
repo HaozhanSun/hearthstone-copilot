@@ -204,6 +204,13 @@ The bot executes steps sequentially:
 - **Stack Traces**: Detailed error information for debugging
 - **Graceful Degradation**: Continues operation when possible
 
+### Process Management
+- **Clean Process Termination**: Aggressive thread termination using ctypes
+- **Timeout Mechanisms**: 5-second timeout for cleanup operations
+- **Signal Handler Safety**: Proper signal handling in main thread only
+- **Force Exit Protection**: `os._exit()` ensures complete process termination
+- **Thread Management**: Enhanced pynput keyboard listener cleanup
+
 ### Advanced OCR
 - **Umi-OCR Integration**: High-accuracy text recognition
 - **Chinese Character Support**: Special handling for Chinese text
@@ -278,6 +285,12 @@ python -c "from steps import BaseStep; print('Steps work')"
 4. **"OCR not working"**
    - Verify Umi-OCR is running
    - Check the service status
+
+5. **"Process hanging on exit"**
+   - The bot now includes aggressive thread termination
+   - Uses ctypes to force-kill hanging threads
+   - 5-second timeout for cleanup operations
+   - Force exit with `os._exit()` if cleanup fails
 
 ### Debug Mode
 
