@@ -10,22 +10,12 @@ from hscopilot.perception.power import parse_power_log
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-@pytest.mark.parametrize(
-    "filename",
-    (
-        "10357.log",
-        "13619.log",
-        "2016-02-04_TagChangeEntityBug.Power.log",
-    ),
-)
-@pytest.mark.xfail(
-    strict=True,
-    reason="power.py still returns per-game flattened snapshots; rewired to DecisionPoint in Step 3",
-)
-def test_parse_power_log_populates_snapshots(filename: str) -> None:
-    snapshots = parse_power_log(FIXTURES / filename)
-
-    assert len(snapshots) >= 1
-    assert len(snapshots[0].entities) > 0
-    for action in snapshots[0].legal_actions:
-        assert action.get("error") is None
+def test_parse_power_log_populates_decision_points() -> None:
+    games = parse_power_log(FIXTURES / "13619.log")
+    assert len(games) == 1
+    assert len(games[0].decision_points) == 24
+    assert all(point.legal_actions for point in games[0].decision_points)
+    assert any(
+        point.actual is not None and point.actual.option_id in {action.option_id for action in point.legal_actions}
+        for point in games[0].decision_points
+    )

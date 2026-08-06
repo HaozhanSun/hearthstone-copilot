@@ -1,32 +1,51 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-import xml.etree.ElementTree as ET
+from functools import lru_cache
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CardDefinition:
+    card_id: str
     dbf_id: int
-    card_id: str = ""
-    name: str = ""
+    name: str
     cost: int | None = None
-    attack: int | None = None
+    atk: int | None = None
     health: int | None = None
+    type: str = ""
+    card_class: str = ""
+    description: str = ""
+    collectible: bool = False
+    rarity: str = ""
 
 
 class CardKnowledge:
-    def __init__(self, cards: dict[int, CardDefinition] | None = None):
-        self.cards = cards or {}
+    def __init__(self, cards: dict[str, CardDefinition]):
+        self.cards = cards
 
     @classmethod
-    def from_carddefs_xml(cls, path: str | Path) -> "CardKnowledge":
-        cards: dict[int, CardDefinition] = {}
-        root = ET.parse(path).getroot()
-        for node in root.findall(".//Entity"):
-            try:
-                dbf_id = int(node.attrib.get("ID", "0"))
-            except ValueError:
-                continue
-            cards[dbf_id] = CardDefinition(dbf_id=dbf_id, card_id=node.attrib.get("CardID", ""))
+    @lru_cache(maxsize=1)
+    def load(cls) -> "CardKnowledge":
+        from hearthstone import cardxml
+
+        card_db, _ = cardxml.load()
+        cards = {
+            card.card_id: CardDefinition(
+                card_id=card.card_id,
+                dbf_id=card.dbf_id,
+                name=card.name,
+                cost=card.cost,
+                atk=card.atk,
+                health=card.health,
+                type=card.type,
+                card_class=card.card_class,
+                description=card.description,
+                collectible=card.collectible,
+                rarity=card.rarity,
+            )
+            for card in card_db.values()
+        }
         return cls(cards)
+
+    def lookup(self, card_id: str) -> CardDefinition | None:
+        return self.cards.get(card_id)

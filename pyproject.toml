@@ -3,11 +3,11 @@ name = "hscopilot"
 version = "0.1.0"
 description = "Read-only Hearthstone Power.log copilot and replay evaluator"
 requires-python = ">=3.12"
-dependencies = ["hslog>=3.0", "hearthstone>=6.0"]
+dependencies = ["hslog>=1.19", "hearthstone>=6.0"]
 
 [project.optional-dependencies]
 server = ["fastapi>=0.110", "uvicorn>=0.29"]
-dev = ["pytest>=8", "hslog>=3.0", "hearthstone>=6.0"]
+dev = ["pytest>=8", "hslog>=1.19", "hearthstone>=6.0"]
 
 [project.scripts]
 hscopilot = "hscopilot.cli:main"

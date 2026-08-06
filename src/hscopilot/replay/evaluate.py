@@ -14,9 +14,9 @@ def evaluate(corpus_dir: str | Path) -> dict[str, Any]:
     advisor = HeuristicAdvisor()
     rows = []
     for log in sorted(root.glob("*.log")):
-        snapshot = parse_power_log(log)
-        actions = tuple(LegalAction(**a) for a in snapshot.legal_actions)
-        advice = advisor.advise(snapshot, actions) if actions else None
+        games = parse_power_log(log)
+        points = [point for game in games for point in game.decision_points]
+        advice = advisor.advise(points[0].snapshot, points[0].legal_actions) if points and points[0].legal_actions else None
         expected_path = log.with_suffix(".json")
         expected = json.loads(expected_path.read_text()) if expected_path.exists() else {}
         rows.append({"file": log.name, "action_index": advice.action_index if advice else None,
