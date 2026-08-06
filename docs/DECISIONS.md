@@ -8,4 +8,4 @@
 - The debug UI is localhost-only by default and discrepancy reports are written only when a fixture directory is explicitly supplied.
 - Actuation defaults to `DryRunActuator`; native clicks require explicit construction/enabling and the launcher requires `--execute` plus Play coordinates.
 - The launcher verifies Battle.net process, window title, Hearthstone process, and `PLAY` scene from `LoadingScreen.log`; it does not sleep-and-assume success.
-- The debug UI serves a supplied screenshot through a local-only route and never captures or uploads images itself.
+- The debug UI serves a supplied screenshot through a local-only route. Its focused paste area accepts an image from the browser clipboard with Ctrl+V, stores it in the configured fixture directory (or a temporary local directory), and never sends it to a third party.
