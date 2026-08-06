@@ -5,6 +5,7 @@ import json
 
 from .perception.logconfig import write_log_config
 from .perception.doctor import discover
+from .perception.live import watch_decisions
 from .perception.power import parse_power_log
 from .replay.evaluate import evaluate
 from .render.board import render_board
@@ -15,9 +16,10 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     p_snapshot = sub.add_parser("snapshot"); p_snapshot.add_argument("power_log")
     p_eval = sub.add_parser("replay-evaluate"); p_eval.add_argument("corpus")
-    p_config = sub.add_parser("write-log-config"); p_config.add_argument("path")
+    p_config = sub.add_parser("write-log-config"); p_config.add_argument("path"); p_config.add_argument("--dry-run", action="store_true")
     sub.add_parser("doctor")
     p_board = sub.add_parser("board"); p_board.add_argument("power_log"); p_board.add_argument("index", type=int)
+    p_watch = sub.add_parser("watch"); p_watch.add_argument("logs_dir"); p_watch.add_argument("--poll-seconds", type=float, default=0.25)
     args = parser.parse_args()
     if args.command == "doctor":
         print(json.dumps(discover(), indent=2, sort_keys=True))
@@ -25,7 +27,10 @@ def main() -> None:
         print(json.dumps([game.to_dict() for game in parse_power_log(args.power_log)], indent=2))
     elif args.command == "board":
         print(render_board(parse_power_log(args.power_log)[0], args.index))
+    elif args.command == "watch":
+        for point in watch_decisions(args.logs_dir, poll_seconds=args.poll_seconds):
+            print(json.dumps(point.to_dict(), sort_keys=True), flush=True)
     elif args.command == "replay-evaluate":
         print(json.dumps(evaluate(args.corpus), indent=2))
     else:
-        print(write_log_config(args.path))
+        print(write_log_config(args.path, dry_run=args.dry_run))
