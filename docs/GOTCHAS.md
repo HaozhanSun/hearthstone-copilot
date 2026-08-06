@@ -4,3 +4,5 @@
 - `PacketTree.export()` returns an exporter. The reconstructed `Game` is on `.game` after export.
 - Windows installs may be on a non-system drive. Discover Battle.net/Hearthstone through uninstall registry metadata before standard paths; do not hardcode `C:` or another drive.
 - Hearthstone rotates `Logs/` into timestamped subdirectories and can truncate/recreate `Power.log`; the tailer must reselect the newest file and reset its offset on replacement.
+- Launcher execution is intentionally gated: dry-run is the default, and real Battle.net Play clicks require explicit coordinates plus `--execute`.
+- A real launcher run needs the current Battle.net Play-button coordinates; the coordinate is deliberately not guessed from a screenshot.

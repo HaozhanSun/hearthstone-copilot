@@ -24,6 +24,7 @@ class LogTailer:
         self.offset = 0
         self._identity: tuple[int, int] | None = None
         self._mtime_ns: int | None = None
+        self._sample: bytes = b""
 
     def switch(self, path: str | Path) -> None:
         target = Path(path)
@@ -32,6 +33,7 @@ class LogTailer:
             self.offset = 0
             self._identity = None
             self._mtime_ns = None
+            self._sample = b""
 
     def read_new_lines(self) -> list[str]:
         if not self.path.exists():
@@ -39,7 +41,11 @@ class LogTailer:
         stat = self.path.stat()
         identity = (stat.st_dev, stat.st_ino)
         replaced_at_same_size = stat.st_size == self.offset and self._mtime_ns not in (None, stat.st_mtime_ns)
-        if self._identity != identity or stat.st_size < self.offset or replaced_at_same_size:
+        with self.path.open("rb") as sample_handle:
+            sample_handle.seek(max(0, stat.st_size - 4096))
+            sample = sample_handle.read()
+        content_changed_at_same_size = stat.st_size == self.offset and self._sample != sample
+        if self._identity != identity or stat.st_size < self.offset or replaced_at_same_size or content_changed_at_same_size:
             self.offset = 0
             self._identity = identity
         self._mtime_ns = stat.st_mtime_ns
@@ -47,6 +53,7 @@ class LogTailer:
             handle.seek(self.offset)
             lines = handle.readlines()
             self.offset = handle.tell()
+        self._sample = sample
         return lines
 
     def follow(self, *, poll_seconds: float = 0.25, stop: threading.Event | None = None) -> Iterator[str]:
