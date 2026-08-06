@@ -1,6 +1,6 @@
 # Hearthstone Copilot
 
-This repository is now a read-only Hearthstone advisory and replay-analysis core. It deliberately does not inject into the client, click the game, or use screen OCR as primary perception.
+This repository contains a log-first Hearthstone advisory core and an explicitly user-triggered Windows opening-flow debugger. The debugger uses Windows UI Automation for Battle.net controls and local OCR only when Hearthstone renders a control without an accessibility node; it does not inject into the game client.
 
 ## Architecture
 
@@ -26,6 +26,10 @@ uv sync
 uv run hscopilot snapshot path\to\Power.log
 uv run hscopilot replay-evaluate fixtures\
 uv run hscopilot write-log-config path\to\log.config
+uv run hscopilot debug-ui
 ```
 
-The heuristic advisor is a zero-cost baseline. Live advisory and a localhost WebSocket UI can be added on the same pipeline; automation/input control is intentionally out of scope.
+The heuristic advisor is a zero-cost baseline. The localhost debug UI includes screenshot paste, discrepancy reporting, and an explicit Launch Hearthstone action. The opening flow re-observes before every action, closes only the approved Battle.net “What’s New?” modal, clicks a named Play control, recognizes the rendered `点击开始` control through local OCR, and verifies four home-screen mode labels.
+The debug UI also exposes explicit Close Hearthstone and Close Battle.net actions for returning to a clean Windows desktop before a fresh launch.
+
+On Windows, the native desktop app can be built with `powershell -ExecutionPolicy Bypass -File packaging/windows/build_debug_ui_app.ps1` and installed with `powershell -ExecutionPolicy Bypass -File packaging/windows/install_desktop_shortcut.ps1`. Double-click `Hearthstone Copilot Debug UI` on the Desktop; the Launch and Close buttons then run through the same local debug-UI worker.

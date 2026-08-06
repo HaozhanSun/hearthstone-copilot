@@ -8,9 +8,12 @@ dependencies = ["hslog>=1.19", "hearthstone>=6.0"]
 [project.optional-dependencies]
 server = ["fastapi>=0.110", "uvicorn>=0.29"]
 dev = ["pytest>=8", "hslog>=1.19", "hearthstone>=6.0"]
+windows = ["pywinauto>=0.6.9", "rapidocr-onnxruntime>=1.2.3"]
+windows-app = ["pywinauto>=0.6.9", "rapidocr-onnxruntime>=1.2.3", "pywebview>=5.0", "pyinstaller>=6.0"]
 
 [project.scripts]
 hscopilot = "hscopilot.cli:main"
+hscopilot-debug-ui-app = "hscopilot.windows_app:main"
 
 [build-system]
 requires = ["setuptools>=68"]

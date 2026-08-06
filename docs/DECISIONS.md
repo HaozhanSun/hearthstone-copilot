@@ -9,3 +9,6 @@
 - Actuation defaults to `DryRunActuator`; native clicks require explicit construction/enabling and the launcher requires `--execute` plus Play coordinates.
 - The launcher verifies Battle.net process, window title, Hearthstone process, and `PLAY` scene from `LoadingScreen.log`; it does not sleep-and-assume success.
 - The debug UI serves a supplied screenshot through a local-only route. Its focused paste area accepts an image from the browser clipboard with Ctrl+V, stores it in the configured fixture directory (or a temporary local directory), and never sends it to a third party.
+- The debug UI's opening automation is explicit and safety-gated: it stops on login, security, CAPTCHA, permission, or unknown-modal text; it closes only an observed Battle.net “What's New?” dialog, invokes an observed Play control, OCR-clicks an observed `点击开始` bounding box, and requires four observed home mode labels before reporting success.
+- Closing is semantic and verified: the debug UI invokes the observed Hearthstone or Battle.net window close action and reports success only after both the window and matching process disappear.
+- The Windows debug UI is also packaged as a native WebView desktop app. Its visible buttons call the same localhost debug server and background automation worker; the app shell does not perform hidden automation outside the UI.
