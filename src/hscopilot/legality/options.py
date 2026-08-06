@@ -1,40 +1,37 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from typing import Any, Iterable
+from dataclasses import dataclass
+from typing import Any, Mapping
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class LegalAction:
-    index: int
-    kind: str = "option"
+    option_id: int
     entity: int | None = None
-    target: int | None = None
-    position: int | None = None
-    payload: tuple[tuple[str, Any], ...] = ()
+    optype: str = ""
+    sub_option_ids: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "sub_option_ids", tuple(self.sub_option_ids))
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self) | {"payload": dict(self.payload)}
+        return {
+            "option_id": self.option_id,
+            "entity": self.entity,
+            "optype": self.optype,
+            "sub_option_ids": self.sub_option_ids,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "LegalAction":
+        return cls(
+            option_id=int(data["option_id"]),
+            entity=data.get("entity"),
+            optype=str(data.get("optype", "")),
+            sub_option_ids=tuple(int(value) for value in data.get("sub_option_ids", ())),
+        )
 
 
-def _get(obj: Any, name: str, default: Any = None) -> Any:
-    return getattr(obj, name, obj.get(name, default) if isinstance(obj, dict) else default)
-
-
-def extract_legal_actions(packets: Iterable[Any]) -> tuple[LegalAction, ...]:
-    actions: list[LegalAction] = []
-    for packet in packets:
-        name = type(packet).__name__.lower()
-        if name not in {"options", "option", "sendoption", "choices", "sendchoices"}:
-            continue
-        options = _get(packet, "options", ()) or _get(packet, "choices", ()) or ()
-        if not options:
-            options = (packet,)
-        for item in options:
-            index = _get(item, "index", _get(item, "id", len(actions)))
-            actions.append(LegalAction(
-                index=int(index), kind=type(item).__name__.lower(),
-                entity=_get(item, "entity"), target=_get(item, "target"),
-                position=_get(item, "position"),
-            ))
-    return tuple(actions)
+def extract_legal_actions(_packets: Any) -> tuple[LegalAction, ...]:
+    """Removed in Step 1; decision-point extraction is implemented in Step 2."""
+    raise NotImplementedError("extract_legal_actions is deferred to Step 2")
